@@ -1,4 +1,4 @@
-# Terno: AI-Powered Filipino Fashion Assistant
+# Terno: AI-Powered Fashion Assistant
 
 Terno is an AI-powered outfit recommendation mobile app designed for users who are not fashion-savvy. The app allows users to upload or take a photo of a clothing item, choose an occasion, and receive complete outfit combinations based on the uploaded image. It helps users style their clothes with confidence by suggesting matching tops, bottoms, shoes, outerwear, and accessories.
 
