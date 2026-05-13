@@ -1,50 +1,30 @@
-# Welcome to your Expo app 👋
+# Terno: AI-Powered Filipino Fashion Assistant
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Terno is an AI-powered outfit recommendation mobile app designed for users who are not fashion-savvy. The app allows users to upload or take a photo of a clothing item, choose an occasion, and receive complete outfit combinations based on the uploaded image. It helps users style their clothes with confidence by suggesting matching tops, bottoms, shoes, outerwear, and accessories.
 
-## Get started
+The app uses a React Native + Expo frontend and a FastAPI backend. It supports image upload, camera capture, occasion-based styling, AI-generated outfit recommendations, saved outfits, and user style preferences. Terno also includes a Filipino-inspired visual design using warm neutral tones, deep navy accents, muted gold details, and modern heritage-inspired styling.
 
-1. Install dependencies
+## Key Features
 
-   ```bash
-   npm install
-   ```
+- Upload or capture a clothing item photo
+- Choose an occasion such as Casual, School, Work, Date, Party, or Interview
+- Generate AI-powered outfit combinations
+- Display detected clothing details such as color, material, fit, style, and formality
+- View complete outfit recommendations with styling explanations
+- Save favorite outfit combinations as “Ternos”
+- Set personal style preferences for future recommendations
+- Filipino-themed mobile UI inspired by contemporary heritage design
 
-2. Start the app
+## Tech Stack
 
-   ```bash
-   npx expo start
-   ```
+- React Native
+- Expo
+- TypeScript
+- FastAPI
+- Python
+- Gemini Vision API / Mock AI mode
+- AsyncStorage
 
-In the output, you'll find options to open the app in a
+## Project Purpose
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Terno was built as a practical AI fashion assistant that helps users answer the question: “What should I wear with this?” Instead of simply identifying clothing items, the app focuses on creating wearable, beginner-friendly outfit combinations based on color harmony, occasion, style compatibility, and personal preferences.
