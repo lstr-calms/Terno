@@ -10,14 +10,15 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: AppTheme.colors.primary,
-        tabBarInactiveTintColor: AppTheme.colors.tabInactive,
+        tabBarActiveTintColor: AppTheme.colors['primary-container'],
+        tabBarInactiveTintColor: AppTheme.colors.outline,
         tabBarStyle: {
           backgroundColor: AppTheme.colors.background,
-          borderTopColor: AppTheme.colors.border,
+          borderTopColor: AppTheme.colors['outline-variant'],
         },
         tabBarLabelStyle: {
-          fontWeight: "800",
+          fontFamily: AppTheme.typography['label-sm'].fontFamily,
+          fontWeight: "600",
         },
       }}
     >

@@ -37,6 +37,33 @@ IMAGE_GENERATION_MODELS = [
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 
+def extract_inline_image_data(response):
+    parts = []
+
+    response_parts = getattr(response, "parts", None)
+    if response_parts:
+        parts.extend(response_parts)
+
+    for candidate in getattr(response, "candidates", []) or []:
+        content = getattr(candidate, "content", None)
+        candidate_parts = getattr(content, "parts", None) if content else None
+        if candidate_parts:
+            parts.extend(candidate_parts)
+
+    for part in parts:
+        inline_data = getattr(part, "inline_data", None)
+        if inline_data is not None and getattr(inline_data, "data", None):
+            image_data = inline_data.data
+            if isinstance(image_data, str):
+                encoded_image = image_data
+            else:
+                encoded_image = base64.b64encode(image_data).decode("utf-8")
+            mime_type = getattr(inline_data, "mime_type", None) or "image/png"
+            return f"data:{mime_type};base64,{encoded_image}"
+
+    return None
+
+
 @app.get("/")
 def home():
     return {"message": "Ternobackend is running"}
@@ -106,21 +133,13 @@ Image requirements:
                     ),
                 )
 
-                for part in getattr(response, "parts", []) or []:
-                    inline_data = getattr(part, "inline_data", None)
-                    if inline_data is not None and getattr(inline_data, "data", None):
-                        image_data = inline_data.data
-                        if isinstance(image_data, str):
-                            encoded_image = image_data
-                        else:
-                            encoded_image = base64.b64encode(image_data).decode("utf-8")
-                        mime_type = getattr(inline_data, "mime_type", None) or "image/png"
-
-                        return {
-                            "status": "success",
-                            "model": model,
-                            "image_data_uri": f"data:{mime_type};base64,{encoded_image}",
-                        }
+                image_data_uri = extract_inline_image_data(response)
+                if image_data_uri:
+                    return {
+                        "status": "success",
+                        "model": model,
+                        "image_data_uri": image_data_uri,
+                    }
 
                 raise RuntimeError("Image model did not return image data.")
             except Exception as model_error:
