@@ -7,16 +7,21 @@ import {
   Image,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
+import { FullLookPreview } from "@/components/full-look-preview";
+import { GENERATE_LOOK_PREVIEW_URL } from "@/constants/api";
 import { AppTheme } from "@/constants/theme";
-import type { SavedTerno } from "@/types/terno";
+import type { Recommendation, SavedTerno } from "@/types/terno";
 
 export default function SavedTernosScreen() {
   const [savedTernos, setSavedTernos] = useState<SavedTerno[]>([]);
+  const [aiPreviewImages, setAiPreviewImages] = useState<Record<string, string>>({});
+  const [aiPreviewLoading, setAiPreviewLoading] = useState<Record<string, boolean>>({});
 
   const loadSavedTernos = async () => {
     try {
@@ -61,6 +66,63 @@ export default function SavedTernosScreen() {
     );
   };
 
+  const generateLookPreview = async (
+    savedId: string,
+    imageUri: string | null,
+    recommendation: Recommendation
+  ) => {
+    if (!imageUri) {
+      Alert.alert("No image found", "This saved Terno does not have an uploaded item image.");
+      return;
+    }
+
+    try {
+      setAiPreviewLoading((current) => ({ ...current, [savedId]: true }));
+
+      const formData = new FormData();
+      formData.append("image", {
+        uri: imageUri,
+        name: "clothing.jpg",
+        type: "image/jpeg",
+      } as any);
+      formData.append("recommendation", JSON.stringify(recommendation));
+
+      const response = await fetch(GENERATE_LOOK_PREVIEW_URL, {
+        method: "POST",
+        body: formData,
+      });
+      const text = await response.text();
+
+      if (!response.ok) {
+        console.error("Saved AI preview error:", response.status, text);
+        Alert.alert(
+          "Preview failed",
+          "Terno could not generate this AI look preview right now."
+        );
+        return;
+      }
+
+      const data = JSON.parse(text);
+      if (!data.image_data_uri) {
+        Alert.alert("Preview failed", "The backend did not return an image.");
+        return;
+      }
+
+      setAiPreviewImages((current) => ({
+        ...current,
+        [savedId]: data.image_data_uri,
+      }));
+    } catch (error) {
+      console.error("Generate saved AI preview error:", error);
+      Alert.alert(
+        "Connection error",
+        "Could not connect to the Terno backend for AI preview generation."
+      );
+    } finally {
+      setAiPreviewLoading((current) => ({ ...current, [savedId]: false }));
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadSavedTernos();
@@ -98,10 +160,6 @@ export default function SavedTernosScreen() {
 
           return (
             <View key={item.id} style={styles.savedCard}>
-              {item.imageUri && (
-                <Image source={{ uri: item.imageUri }} style={styles.savedImage} />
-              )}
-
               <View style={styles.cardContent}>
                 <View style={styles.topRow}>
                   <View>
@@ -131,12 +189,62 @@ export default function SavedTernosScreen() {
                   {item.occasion || "Not specified"}
                 </Text>
 
+                {item.usedWardrobeMode && (
+                  <View style={styles.wardrobeBadge}>
+                    <Ionicons name="shirt" size={12} color="#735C00" />
+                    <Text style={styles.wardrobeBadgeText}>Used My Wardrobe</Text>
+                  </View>
+                )}
+
+                <FullLookPreview
+                  imageUri={item.imageUri}
+                  recommendation={recommendation}
+                />
+
+                {aiPreviewImages[item.id] && (
+                  <View style={styles.aiPreviewBox}>
+                    <Image
+                      source={{ uri: aiPreviewImages[item.id] }}
+                      style={styles.aiPreviewImage}
+                    />
+                    <Text style={styles.aiPreviewCaption}>AI generated preview</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.aiPreviewButton,
+                    aiPreviewLoading[item.id] && styles.disabledButton,
+                  ]}
+                  onPress={() =>
+                    generateLookPreview(item.id, item.imageUri, recommendation)
+                  }
+                  disabled={aiPreviewLoading[item.id]}
+                >
+                  {aiPreviewLoading[item.id] ? (
+                    <ActivityIndicator color={AppTheme.colors.primaryTextOnDark} />
+                  ) : (
+                    <Text style={styles.aiPreviewButtonText}>
+                      {aiPreviewImages[item.id]
+                        ? "Regenerate AI Preview"
+                        : "Generate AI Preview"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
                 <View style={styles.outfitBox}>
                   <OutfitRow label="Top" value={recommendation.top} />
                   <OutfitRow label="Bottom" value={recommendation.bottom} />
                   <OutfitRow label="Shoes" value={recommendation.shoes} />
                   <OutfitRow label="Outerwear" value={recommendation.outerwear} />
                   <OutfitRow label="Accessories" value={recommendation.accessories} />
+                </View>
+
+                <View style={styles.scoresGrid}>
+                  {recommendation.compatibility_score !== undefined && <ScorePill label="Match" score={recommendation.compatibility_score} />}
+                  {recommendation.color_score !== undefined && <ScorePill label="Color" score={recommendation.color_score} />}
+                  {recommendation.style_score !== undefined && <ScorePill label="Style" score={recommendation.style_score} />}
+                  {recommendation.occasion_score !== undefined && <ScorePill label="Occasion" score={recommendation.occasion_score} />}
                 </View>
 
                 <View style={styles.reasonBox}>
@@ -147,6 +255,13 @@ export default function SavedTernosScreen() {
                       "This outfit matches your uploaded item."}
                   </Text>
                 </View>
+
+                {recommendation.occasion_reasoning && (
+                  <Text style={styles.smallReason}>
+                    <Text style={styles.bold}>Occasion: </Text>
+                    {recommendation.occasion_reasoning}
+                  </Text>
+                )}
               </View>
             </View>
           );
@@ -161,6 +276,15 @@ function OutfitRow({ label, value }: { label: string; value?: string }) {
     <View style={styles.outfitRow}>
       <Text style={styles.outfitLabel}>{label}</Text>
       <Text style={styles.outfitValue}>{value || "Not specified"}</Text>
+    </View>
+  );
+}
+
+function ScorePill({ label, score }: { label: string; score: number }) {
+  return (
+    <View style={styles.scorePill}>
+      <Text style={styles.scoreLabel}>{label}</Text>
+      <Text style={styles.scoreValue}>{score}%</Text>
     </View>
   );
 }
@@ -247,11 +371,6 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     overflow: "hidden",
   },
-  savedImage: {
-    width: "100%",
-    height: 230,
-    resizeMode: "cover",
-  },
   cardContent: {
     padding: 18,
   },
@@ -305,6 +424,42 @@ const styles = StyleSheet.create({
     borderColor: "#EEE4D4",
     marginTop: 12,
   },
+  aiPreviewBox: {
+    backgroundColor: "#FBF9F4",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#EEE4D4",
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  aiPreviewImage: {
+    width: "100%",
+    aspectRatio: 4 / 5,
+    resizeMode: "cover",
+  },
+  aiPreviewCaption: {
+    color: "#735C00",
+    fontSize: 12,
+    fontWeight: "900",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    textTransform: "uppercase",
+  },
+  aiPreviewButton: {
+    backgroundColor: AppTheme.colors.primary,
+    borderRadius: 16,
+    paddingVertical: 13,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  disabledButton: {
+    opacity: 0.75,
+  },
+  aiPreviewButtonText: {
+    color: AppTheme.colors.primaryTextOnDark,
+    fontSize: 14,
+    fontWeight: "900",
+  },
   outfitRow: {
     marginBottom: 10,
   },
@@ -340,5 +495,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#5F5548",
     lineHeight: 21,
+  },
+  smallReason: {
+    fontSize: 14,
+    color: "#5F5548",
+    marginTop: 8,
+    lineHeight: 21,
+  },
+  wardrobeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#FBF9F4",
+    borderWidth: 1,
+    borderColor: "#E7DCC8",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+    gap: 4,
+  },
+  wardrobeBadgeText: {
+    fontSize: 11,
+    color: "#735C00",
+    fontWeight: "800",
+  },
+  scoresGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  scorePill: {
+    flex: 1,
+    minWidth: "22%",
+    backgroundColor: AppTheme.colors.surfaceMuted,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    alignItems: "center",
+  },
+  scoreLabel: {
+    fontSize: 10,
+    color: AppTheme.colors.mutedText,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  scoreValue: {
+    fontSize: 14,
+    color: AppTheme.colors.primary,
+    fontWeight: "900",
   },
 });

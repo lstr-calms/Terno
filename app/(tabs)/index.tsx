@@ -8,21 +8,31 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Switch,
+  Share,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 
-import { ANALYZE_CLOTHING_URL } from "@/constants/api";
+import { FullLookPreview } from "@/components/full-look-preview";
+import { ANALYZE_CLOTHING_URL, GENERATE_LOOK_PREVIEW_URL } from "@/constants/api";
 import { AppTheme } from "@/constants/theme";
 import type { AnalysisResponse, Recommendation, SavedTerno } from "@/types/terno";
-const occasions = ["Casual", "School", "Work", "Date", "Party", "Interview"];
+
+const occasions = [
+  "Pasyal", "School", "Work", "Date", "Party", "Interview", 
+  "Family Gathering", "Church", "Graduation", "Fiesta", "Rainy Day", "Commute"
+];
 
 export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedOccasion, setSelectedOccasion] = useState("Casual");
+  const [selectedOccasion, setSelectedOccasion] = useState("Pasyal");
+  const [useWardrobe, setUseWardrobe] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiPreviewImages, setAiPreviewImages] = useState<Record<number, string>>({});
+  const [aiPreviewLoading, setAiPreviewLoading] = useState<Record<number, boolean>>({});
 
   const handleSaveTerno = async (recommendation: Recommendation, index: number) => {
     try {
@@ -34,6 +44,7 @@ export default function HomeScreen() {
         detectedItem: detectedItem,
         recommendation : recommendation,
         lookNumber: index + 1,
+        usedWardrobeMode: useWardrobe,
       };
 
       const existingData = await AsyncStorage.getItem("saved_ternos");
@@ -93,7 +104,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (regenerate: boolean = false) => {
     if (!selectedImage) {
       Alert.alert("No image selected", "Please upload or take a clothing photo.");
       return;
@@ -101,7 +112,11 @@ export default function HomeScreen() {
 
     try {
       setLoading(true);
-      setAnalysisResult(null);
+      if (!regenerate) {
+        setAnalysisResult(null);
+        setAiPreviewImages({});
+        setAiPreviewLoading({});
+      }
 
       const formData = new FormData();
 
@@ -112,6 +127,17 @@ export default function HomeScreen() {
       } as any);
 
       formData.append("occasion", selectedOccasion);
+
+      if (regenerate) {
+        formData.append("regenerate", "true");
+      }
+
+      if (useWardrobe) {
+        const wardrobeData = await AsyncStorage.getItem("terno_wardrobe");
+        if (wardrobeData) {
+          formData.append("wardrobe", wardrobeData);
+        }
+      }
 
       const savedPreferences = await AsyncStorage.getItem("terno_preferences");
       if (savedPreferences) {
@@ -158,10 +184,83 @@ export default function HomeScreen() {
     }
   };
 
+  const shareOutfit = async (rec: Recommendation) => {
+    try {
+      const message = `Check out this outfit from Terno!\n\n` +
+        `Theme: ${rec.title}\n` +
+        `Top: ${rec.top || "N/A"}\n` +
+        `Bottom: ${rec.bottom || "N/A"}\n` +
+        `Shoes: ${rec.shoes || "N/A"}\n\n` +
+        `Why it works: ${rec.why_this_is_best || rec.style_reasoning || "It looks great!"}`;
+      
+      await Share.share({ message });
+    } catch (error) {
+      console.error("Share error:", error);
+    }
+  };
+
   const handleReset = () => {
     setSelectedImage(null);
     setSelectedOccasion("Casual");
     setAnalysisResult(null);
+    setAiPreviewImages({});
+    setAiPreviewLoading({});
+  };
+
+  const handleGenerateLookPreview = async (
+    recommendation: Recommendation,
+    index: number
+  ) => {
+    if (!selectedImage) {
+      Alert.alert("No image selected", "Please upload or take a clothing photo first.");
+      return;
+    }
+
+    try {
+      setAiPreviewLoading((current) => ({ ...current, [index]: true }));
+
+      const formData = new FormData();
+      formData.append("image", {
+        uri: selectedImage,
+        name: "clothing.jpg",
+        type: "image/jpeg",
+      } as any);
+      formData.append("recommendation", JSON.stringify(recommendation));
+
+      const response = await fetch(GENERATE_LOOK_PREVIEW_URL, {
+        method: "POST",
+        body: formData,
+      });
+      const text = await response.text();
+
+      if (!response.ok) {
+        console.error("AI preview error:", response.status, text);
+        Alert.alert(
+          "Preview failed",
+          "Terno could not generate this AI look preview right now."
+        );
+        return;
+      }
+
+      const data = JSON.parse(text);
+      if (!data.image_data_uri) {
+        Alert.alert("Preview failed", "The backend did not return an image.");
+        return;
+      }
+
+      setAiPreviewImages((current) => ({
+        ...current,
+        [index]: data.image_data_uri,
+      }));
+    } catch (error) {
+      console.error("Generate AI preview error:", error);
+      Alert.alert(
+        "Connection error",
+        "Could not connect to the Terno backend for AI preview generation."
+      );
+    } finally {
+      setAiPreviewLoading((current) => ({ ...current, [index]: false }));
+    }
   };
 
   const detectedItem = analysisResult?.detected_item;
@@ -205,10 +304,10 @@ export default function HomeScreen() {
 
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Choose Occasion</Text>
-        <Text style={styles.sectionHint}>Pick one</Text>
+        <Text style={styles.sectionHint}>Swipe for more</Text>
       </View>
 
-      <View style={styles.occasionContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.occasionScroll}>
         {occasions.map((occasion) => (
           <TouchableOpacity
             key={occasion}
@@ -231,11 +330,24 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
         ))}
+      </ScrollView>
+
+      <View style={styles.wardrobeToggleContainer}>
+        <Text style={styles.wardrobeToggleLabel}>Use My Wardrobe</Text>
+        <Switch
+          value={useWardrobe}
+          onValueChange={(val) => {
+            setUseWardrobe(val);
+            setAnalysisResult(null);
+          }}
+          trackColor={{ false: AppTheme.colors.borderMuted, true: AppTheme.colors.primary }}
+          thumbColor={AppTheme.colors.surface}
+        />
       </View>
 
       <TouchableOpacity
         style={[styles.analyzeButton, loading && styles.disabledButton]}
-        onPress={handleAnalyze}
+        onPress={() => handleAnalyze(false)}
         disabled={loading}
       >
         {loading ? (
@@ -293,12 +405,48 @@ export default function HomeScreen() {
 
               <Text style={styles.recommendationTitle}>{rec.title}</Text>
 
+              <FullLookPreview imageUri={selectedImage} recommendation={rec} />
+
+              {aiPreviewImages[index] && (
+                <View style={styles.aiPreviewBox}>
+                  <Image
+                    source={{ uri: aiPreviewImages[index] }}
+                    style={styles.aiPreviewImage}
+                  />
+                  <Text style={styles.aiPreviewCaption}>AI generated preview</Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.aiPreviewButton,
+                  aiPreviewLoading[index] && styles.disabledButton,
+                ]}
+                onPress={() => handleGenerateLookPreview(rec, index)}
+                disabled={aiPreviewLoading[index]}
+              >
+                {aiPreviewLoading[index] ? (
+                  <ActivityIndicator color={AppTheme.colors.primaryTextOnDark} />
+                ) : (
+                  <Text style={styles.aiPreviewButtonText}>
+                    {aiPreviewImages[index] ? "Regenerate AI Preview" : "Generate AI Preview"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
               <View style={styles.outfitList}>
                 <OutfitRow label="Top" value={rec.top || "Use uploaded item if applicable"} />
                 <OutfitRow label="Bottom" value={rec.bottom || "Not needed"} />
                 <OutfitRow label="Shoes" value={rec.shoes || "Not specified"} />
                 <OutfitRow label="Outerwear" value={rec.outerwear || "Optional"} />
                 <OutfitRow label="Accessories" value={rec.accessories || "Optional"} />
+              </View>
+
+              <View style={styles.scoresGrid}>
+                {rec.compatibility_score !== undefined && <ScorePill label="Match" score={rec.compatibility_score} />}
+                {rec.color_score !== undefined && <ScorePill label="Color" score={rec.color_score} />}
+                {rec.style_score !== undefined && <ScorePill label="Style" score={rec.style_score} />}
+                {rec.occasion_score !== undefined && <ScorePill label="Occasion" score={rec.occasion_score} />}
               </View>
 
               <View style={styles.reasonBox}>
@@ -320,6 +468,22 @@ export default function HomeScreen() {
                 {rec.style_reasoning || "The pieces work well together for the occasion."}
               </Text>
 
+              {rec.occasion_reasoning && (
+                <Text style={styles.smallReason}>
+                  <Text style={styles.bold}>Occasion: </Text>
+                  {rec.occasion_reasoning}
+                </Text>
+              )}
+
+              {rec.beginner_tip && (
+                <View style={styles.tipBox}>
+                  <Text style={styles.tipText}>
+                    <Text style={styles.boldTip}>Tip: </Text>
+                    {rec.beginner_tip}
+                  </Text>
+                </View>
+              )}
+
               <View style={styles.avoidBox}>
                 <Text style={styles.avoidText}>
                   <Text style={styles.boldAvoid}>Avoid: </Text>
@@ -328,14 +492,36 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-              <TouchableOpacity 
-              style={styles.saveButton}
-              onPress={() => handleSaveTerno(rec,index)}
-              >
-                <Text style={styles.saveButtonText}>Save This Terno</Text>
-              </TouchableOpacity>
+              <View style={styles.actionButtonsRow}>
+                <TouchableOpacity 
+                  style={styles.saveButtonHalf}
+                  onPress={() => handleSaveTerno(rec, index)}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.shareButtonHalf}
+                  onPress={() => shareOutfit(rec)}
+                >
+                  <Ionicons name="share-outline" size={18} color="#735C00" />
+                  <Text style={styles.shareButtonText}>Share</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
+
+          <TouchableOpacity
+            style={[styles.regenerateButton, loading && styles.disabledButton]}
+            onPress={() => handleAnalyze(true)}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={AppTheme.colors.primary} />
+            ) : (
+              <Text style={styles.regenerateButtonText}>Generate More Looks</Text>
+            )}
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>
@@ -356,6 +542,15 @@ function OutfitRow({ label, value }: { label: string; value: string }) {
     <View style={styles.outfitRow}>
       <Text style={styles.outfitLabel}>{label}</Text>
       <Text style={styles.outfitValue}>{value}</Text>
+    </View>
+  );
+}
+
+function ScorePill({ label, score }: { label: string; score: number }) {
+  return (
+    <View style={styles.scorePill}>
+      <Text style={styles.scoreLabel}>{label}</Text>
+      <Text style={styles.scoreValue}>{score}%</Text>
     </View>
   );
 }
@@ -471,12 +666,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  occasionContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  occasionScroll: {
+    paddingRight: AppTheme.spacing.screen,
     gap: 10,
-    width: "100%",
-    marginBottom: 28,
+    marginBottom: 20,
   },
   occasionChip: {
     paddingVertical: 10,
@@ -496,6 +689,25 @@ const styles = StyleSheet.create({
   },
   selectedOccasionText: {
     color: AppTheme.colors.primaryTextOnDark,
+  },
+
+  wardrobeToggleContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: AppTheme.colors.surface,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.borderMuted,
+    marginBottom: 20,
+    width: "100%",
+  },
+  wardrobeToggleLabel: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: AppTheme.colors.primary,
   },
 
   analyzeButton: {
@@ -651,6 +863,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EEE4D4",
   },
+  aiPreviewBox: {
+    backgroundColor: "#FBF9F4",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#EEE4D4",
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  aiPreviewImage: {
+    width: "100%",
+    aspectRatio: 4 / 5,
+    resizeMode: "cover",
+  },
+  aiPreviewCaption: {
+    color: "#735C00",
+    fontSize: 12,
+    fontWeight: "900",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    textTransform: "uppercase",
+  },
+  aiPreviewButton: {
+    backgroundColor: AppTheme.colors.primary,
+    borderRadius: 16,
+    paddingVertical: 13,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  aiPreviewButtonText: {
+    color: AppTheme.colors.primaryTextOnDark,
+    fontSize: 14,
+    fontWeight: "900",
+  },
   outfitRow: {
     marginBottom: 10,
   },
@@ -714,9 +959,29 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#721E12",
   },
+  tipBox: {
+    backgroundColor: "#E8F4F8",
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: "#1A4C5E",
+    lineHeight: 21,
+  },
+  boldTip: {
+    fontWeight: "900",
+    color: "#1A4C5E",
+  },
 
-  saveButton: {
+  actionButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
     marginTop: 14,
+  },
+  saveButtonHalf: {
+    flex: 1,
     backgroundColor: "#735C00",
     paddingVertical: 14,
     borderRadius: 16,
@@ -725,6 +990,66 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#FFF8E7",
     fontSize: 14,
+    fontWeight: "900",
+  },
+  shareButtonHalf: {
+    flex: 1,
+    backgroundColor: "#FBF9F4",
+    borderWidth: 1,
+    borderColor: "#E7DCC8",
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  shareButtonText: {
+    color: "#735C00",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  regenerateButton: {
+    width: "100%",
+    backgroundColor: AppTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.borderMuted,
+    paddingVertical: 16,
+    borderRadius: 20,
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  regenerateButtonText: {
+    color: AppTheme.colors.primary,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  scoresGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  scorePill: {
+    flex: 1,
+    minWidth: "22%",
+    backgroundColor: AppTheme.colors.surfaceMuted,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    alignItems: "center",
+  },
+  scoreLabel: {
+    fontSize: 10,
+    color: AppTheme.colors.mutedText,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  scoreValue: {
+    fontSize: 14,
+    color: AppTheme.colors.primary,
     fontWeight: "900",
   },
 });

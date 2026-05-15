@@ -12,3 +12,4 @@ export const API_BASE_URL = (configuredApiBaseUrl || DEFAULT_API_BASE_URL).repla
 );
 
 export const ANALYZE_CLOTHING_URL = `${API_BASE_URL}/analyze-clothing`;
+export const GENERATE_LOOK_PREVIEW_URL = `${API_BASE_URL}/generate-look-preview`;

@@ -10,6 +10,17 @@ export type DetectedItem = {
   description?: string;
 };
 
+export type WardrobeItem = {
+  id: string;
+  imageUri: string | null;
+  category: string;
+  mainColor: string;
+  style: string;
+  formality?: string;
+  notes?: string;
+  createdAt: string;
+};
+
 export type Recommendation = {
   title: string;
   occasion?: string;
@@ -19,10 +30,17 @@ export type Recommendation = {
   shoes?: string;
   outerwear?: string;
   accessories?: string;
+  compatibility_score?: number;
+  color_score?: number;
+  occasion_score?: number;
+  style_score?: number;
   color_reasoning?: string;
   style_reasoning?: string;
+  occasion_reasoning?: string;
+  beginner_tip?: string;
   why_this_is_best?: string;
   avoid?: string;
+  used_wardrobe_items?: string[];
 };
 
 export type AnalysisResponse = {
@@ -40,6 +58,7 @@ export type SavedTerno = {
   detectedItem?: DetectedItem;
   recommendation: Recommendation;
   lookNumber: number;
+  usedWardrobeMode?: boolean;
 };
 
 export type TernoPreferences = {
