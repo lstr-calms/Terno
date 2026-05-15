@@ -14,8 +14,8 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-
 import { FullLookPreview } from "@/components/full-look-preview";
+import { TernoIcon } from "@/components/TernoIcon";
 import { ANALYZE_CLOTHING_URL, GENERATE_LOOK_PREVIEW_URL } from "@/constants/api";
 import { AppTheme } from "@/constants/theme";
 import type { AnalysisResponse, Recommendation, SavedTerno } from "@/types/terno";
@@ -280,7 +280,7 @@ export default function HomeScreen() {
           <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
         ) : (
           <View style={styles.placeholder}>
-            <Ionicons name="shirt-outline" size={48} color={AppTheme.colors.accent} />
+            <TernoIcon source={require('@/assets/icons/features/style-this-item.png')} size={48} color={AppTheme.colors.accent} style={{marginBottom: 16}} />
             <Text style={styles.placeholderTitle}>Upload your clothing item</Text>
             <Text style={styles.placeholderText}>
               Take a photo or choose from your gallery.
@@ -291,6 +291,7 @@ export default function HomeScreen() {
 
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.secondaryButton} onPress={takePhoto}>
+          <TernoIcon source={require('@/assets/icons/features/take-photo.png')} size={20} color={AppTheme.colors.primary} />
           <Text style={styles.secondaryButtonText}>Take Photo</Text>
         </TouchableOpacity>
 
@@ -298,6 +299,7 @@ export default function HomeScreen() {
           style={styles.secondaryButton}
           onPress={pickImageFromGallery}
         >
+          <TernoIcon source={require('@/assets/icons/features/style-this-item.png')} size={20} color={AppTheme.colors.primary} />
           <Text style={styles.secondaryButtonText}>Upload Image</Text>
         </TouchableOpacity>
       </View>
@@ -320,6 +322,14 @@ export default function HomeScreen() {
               setAnalysisResult(null);
             }}
           >
+            {occasion === "Fiesta" && (
+              <TernoIcon 
+                source={require('@/assets/icons/occasions/fiesta.png')} 
+                size={16} 
+                color={selectedOccasion === occasion ? AppTheme.colors.primaryTextOnDark : AppTheme.colors.bodyText}
+                style={{ marginRight: 6 }}
+              />
+            )}
             <Text
               style={[
                 styles.occasionText,
@@ -519,7 +529,10 @@ export default function HomeScreen() {
             {loading ? (
               <ActivityIndicator color={AppTheme.colors.primary} />
             ) : (
-              <Text style={styles.regenerateButtonText}>Generate More Looks</Text>
+              <>
+                <TernoIcon source={require('@/assets/icons/features/generate-more-looks.png')} size={20} color={AppTheme.colors.primary} />
+                <Text style={styles.regenerateButtonText}>Generate More Looks</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -636,6 +649,9 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     flex: 1,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
     backgroundColor: AppTheme.colors.surface,
     borderWidth: 1,
     borderColor: AppTheme.colors.borderMuted,
@@ -672,6 +688,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   occasionChip: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 999,
@@ -1011,6 +1029,9 @@ const styles = StyleSheet.create({
   },
   regenerateButton: {
     width: "100%",
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
     backgroundColor: AppTheme.colors.surface,
     borderWidth: 1,
     borderColor: AppTheme.colors.borderMuted,

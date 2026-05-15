@@ -1,21 +1,22 @@
-import React, { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { FullLookPreview } from "@/components/full-look-preview";
 import { GENERATE_LOOK_PREVIEW_URL } from "@/constants/api";
 import { AppTheme } from "@/constants/theme";
+import { TernoIcon } from "@/components/TernoIcon";
 import type { Recommendation, SavedTerno } from "@/types/terno";
 
 export default function SavedTernosScreen() {
@@ -147,7 +148,7 @@ export default function SavedTernosScreen() {
 
       {savedTernos.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Ionicons name="bookmark-outline" size={48} color={AppTheme.colors.accent} />
+          <TernoIcon source={require('@/assets/icons/tabs/saved-inactive.png')} size={48} color={AppTheme.colors.accent} />
           <Text style={styles.emptyTitle}>No saved Ternos yet</Text>
           <Text style={styles.emptyText}>
             Save an outfit recommendation from the Home screen to see it here.
@@ -191,7 +192,7 @@ export default function SavedTernosScreen() {
 
                 {item.usedWardrobeMode && (
                   <View style={styles.wardrobeBadge}>
-                    <Ionicons name="shirt" size={12} color="#735C00" />
+                    <TernoIcon source={require('@/assets/icons/tabs/wardrobe-inactive.png')} size={14} color="#735C00" />
                     <Text style={styles.wardrobeBadgeText}>Used My Wardrobe</Text>
                   </View>
                 )}

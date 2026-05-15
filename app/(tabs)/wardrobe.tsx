@@ -16,6 +16,7 @@ import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { AppTheme } from "@/constants/theme";
+import { TernoIcon } from "@/components/TernoIcon";
 import type { WardrobeItem } from "@/types/terno";
 
 const CATEGORIES = ["Top", "Bottom", "Shoes", "Outerwear", "Accessories", "Dress"];
@@ -163,7 +164,7 @@ export default function WardrobeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {wardrobe.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Ionicons name="shirt-outline" size={48} color={AppTheme.colors.accent} />
+            <TernoIcon source={require('@/assets/icons/tabs/wardrobe-inactive.png')} size={48} color={AppTheme.colors.accent} />
             <Text style={styles.emptyTitle}>Your wardrobe is empty</Text>
             <Text style={styles.emptyText}>
               Add your clothing items here so Terno can recommend outfits using what you already own.
@@ -186,7 +187,7 @@ export default function WardrobeScreen() {
                   <Image source={{ uri: item.imageUri }} style={styles.itemImage} />
                 ) : (
                   <View style={styles.itemImagePlaceholder}>
-                    <Ionicons name="shirt" size={32} color={AppTheme.colors.borderMuted} />
+                    <TernoIcon source={require('@/assets/icons/tabs/wardrobe-inactive.png')} size={32} color={AppTheme.colors.borderMuted} />
                   </View>
                 )}
                 <View style={styles.itemInfo}>
@@ -225,17 +226,17 @@ export default function WardrobeScreen() {
                 <Image source={{ uri: imageUri }} style={styles.previewImage} />
               ) : (
                 <View style={styles.previewPlaceholder}>
-                  <Ionicons name="image-outline" size={48} color={AppTheme.colors.borderMuted} />
+                  <TernoIcon source={require('@/assets/icons/features/style-this-item.png')} size={48} color={AppTheme.colors.borderMuted} />
                   <Text style={styles.previewText}>No Image Selected</Text>
                 </View>
               )}
               <View style={styles.imageButtons}>
                 <TouchableOpacity style={styles.imageBtn} onPress={() => pickImage(true)}>
-                  <Ionicons name="camera" size={20} color={AppTheme.colors.primary} />
+                  <TernoIcon source={require('@/assets/icons/features/take-photo.png')} size={20} color={AppTheme.colors.primary} />
                   <Text style={styles.imageBtnText}>Camera</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.imageBtn} onPress={() => pickImage(false)}>
-                  <Ionicons name="images" size={20} color={AppTheme.colors.primary} />
+                  <TernoIcon source={require('@/assets/icons/features/style-this-item.png')} size={20} color={AppTheme.colors.primary} />
                   <Text style={styles.imageBtnText}>Gallery</Text>
                 </TouchableOpacity>
               </View>
@@ -250,6 +251,14 @@ export default function WardrobeScreen() {
                     style={[styles.chip, category === cat && styles.chipActive]}
                     onPress={() => setCategory(cat)}
                   >
+                    {cat === "Top" && (
+                      <TernoIcon 
+                        source={require('@/assets/icons/categories/top.png')}
+                        size={16}
+                        color={category === cat ? AppTheme.colors.primaryTextOnDark : AppTheme.colors.bodyText}
+                        style={{ marginRight: 6 }}
+                      />
+                    )}
                     <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>
                       {cat}
                     </Text>
@@ -542,6 +551,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: AppTheme.colors.surface,

@@ -1,10 +1,9 @@
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 
-import { AppTheme } from "@/constants/theme";
+import { TernoIcon } from "@/components/TernoIcon";
 
-type TabIconName = keyof typeof Ionicons.glyphMap;
+import { AppTheme } from "@/constants/theme";
 
 export default function TabLayout() {
   return (
@@ -26,8 +25,11 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={"home-outline" satisfies TabIconName} color={color} size={size} />
+          tabBarIcon: ({ size, focused }) => (
+            <TernoIcon
+              source={focused ? require('@/assets/icons/tabs/home-active.png') : require('@/assets/icons/tabs/home-inactive.png')}
+              size={size}
+            />
           ),
         }}
       />
@@ -36,8 +38,11 @@ export default function TabLayout() {
         name="saved"
         options={{
           title: "Saved",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={"bookmark-outline" satisfies TabIconName} color={color} size={size} />
+          tabBarIcon: ({ size, focused }) => (
+            <TernoIcon
+              source={focused ? require('@/assets/icons/tabs/saved-active.png') : require('@/assets/icons/tabs/saved-inactive.png')}
+              size={size}
+            />
           ),
         }}
       />
@@ -46,8 +51,11 @@ export default function TabLayout() {
         name="wardrobe"
         options={{
           title: "Wardrobe",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={"shirt-outline" satisfies TabIconName} color={color} size={size} />
+          tabBarIcon: ({ size, focused }) => (
+            <TernoIcon
+              source={focused ? require('@/assets/icons/tabs/wardrobe-active.png') : require('@/assets/icons/tabs/wardrobe-inactive.png')}
+              size={size}
+            />
           ),
         }}
       />
@@ -56,8 +64,11 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={"person-outline" satisfies TabIconName} color={color} size={size} />
+          tabBarIcon: ({ size, focused }) => (
+            <TernoIcon
+              source={focused ? require('@/assets/icons/tabs/profile-active.png') : require('@/assets/icons/tabs/profile-inactive.png')}
+              size={size}
+            />
           ),
         }}
       />
